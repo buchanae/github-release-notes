@@ -1,0 +1,24 @@
+builds:
+  - binary: github-release-notes
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+
+dist: build/release
+
+git:
+  short_hash: true
+
+release:
+  draft: true
+
+env_files:
+  github_token: .github_token
+
+archive:
+  name_template: "{{.ProjectName}}-{{.Os}}-{{.Arch}}-{{.Version}}"
