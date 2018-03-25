@@ -2,7 +2,7 @@
 
 ## Usage
 
-Download a binary from the [releases](/releases) page, or run `go get github.com/buchanae/github-release-notes`.
+Download a binary from the [releases](https://github.com/buchanae/github-release-notes/releases) page, or run `go get github.com/buchanae/github-release-notes`.
 
 Run:
 ```
