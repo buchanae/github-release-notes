@@ -2,9 +2,9 @@ package ghrn
 
 import (
 	"context"
-  "net/http"
 	"fmt"
-  "io"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -13,39 +13,39 @@ import (
 
 // Config describes configuration for BuildReleaseNotes.
 type Config struct {
-  // Org is the name of the GitHub organization. Required.
-  Org string
-  // Repo is the name of the GitHub repository. Required.
-  Repo string
+	// Org is the name of the GitHub organization. Required.
+	Org string
+	// Repo is the name of the GitHub repository. Required.
+	Repo string
 
-  // GitHubToken is a GitHub API access token.
-  GitHubToken string
+	// GitHubToken is a GitHub API access token.
+	GitHubToken string
 
-  // StopAt is the number of the Pull Request to stop at.
-  // Useful for building the notes of PRs since the last release, for example.
-  StopAt int
-  // IncludeCommits will include commmits messages for each PR.
-  IncludeCommits bool
+	// StopAt is the number of the Pull Request to stop at.
+	// Useful for building the notes of PRs since the last release, for example.
+	StopAt int
+	// IncludeCommits will include commmits messages for each PR.
+	IncludeCommits bool
 }
 
 // BuildReleaseNotes lists GitHub Pull Requests and writes formatted release notes
 // to the given writer.
 func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 
-  if conf.Org == "" {
-    return fmt.Errorf("Config.Org is required")
-  }
-  if conf.Repo == "" {
-    return fmt.Errorf("Config.Repo is required")
-  }
+	if conf.Org == "" {
+		return fmt.Errorf("Config.Org is required")
+	}
+	if conf.Repo == "" {
+		return fmt.Errorf("Config.Repo is required")
+	}
 
-  var httpClient *http.Client
-  if conf.GitHubToken != "" {
-    ts := oauth2.StaticTokenSource(
-      &oauth2.Token{AccessToken: conf.GitHubToken},
-    )
-    httpClient = oauth2.NewClient(ctx, ts)
-  }
+	var httpClient *http.Client
+	if conf.GitHubToken != "" {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: conf.GitHubToken},
+		)
+		httpClient = oauth2.NewClient(ctx, ts)
+	}
 	cl := github.NewClient(httpClient)
 
 	opt := &github.PullRequestListOptions{
@@ -57,13 +57,13 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 	for {
 		prs, resp, err := cl.PullRequests.List(ctx, conf.Org, conf.Repo, opt)
 		if err != nil {
-      return fmt.Errorf("listing PRs: %s", err)
+			return fmt.Errorf("listing PRs: %s", err)
 		}
 
 		// Iterate over PRs in this page.
 		for _, pr := range prs {
 			if *pr.Number == conf.StopAt {
-        return nil
+				return nil
 			}
 			if pr.MergedAt == nil {
 				continue
@@ -78,7 +78,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 
 					commits, resp, err := cl.PullRequests.ListCommits(ctx, conf.Org, conf.Repo, pr.GetNumber(), commitOpt)
 					if err != nil {
-            return fmt.Errorf("listing PR commits: %s", err)
+						return fmt.Errorf("listing PR commits: %s", err)
 					}
 
 					// Iterate over commits in this page.
@@ -113,5 +113,5 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		}
 		opt.Page = resp.NextPage
 	}
-  return nil
+	return nil
 }
