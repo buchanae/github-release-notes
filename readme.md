@@ -27,6 +27,13 @@ github-release-notes -org ohsu-comp-bio -repo funnel -stop-at 513
 - PR #514 build: fix release notes command
 ```
 
+You can generating notes with PR that not included latest release:
+```
+github-release-notes -org ohsu-comp-bio -repo funnel -since-latest-release 
+- PR #594 cmd/worker: run task from file
+- PR #593 storage/ftp: add FTP support
+```
+
 You can include the git commit messages for each PR:
 ```
 github-release-notes -org ohsu-comp-bio -repo funnel -include-commits
