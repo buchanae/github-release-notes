@@ -26,6 +26,8 @@ type Config struct {
 	StopAt int
 	// IncludeCommits will include commmits messages for each PR.
 	IncludeCommits bool
+	// StopAtLatestRelease will stop at latest release commit.
+	StopAtLatestRelease bool
 }
 
 // BuildReleaseNotes lists GitHub Pull Requests and writes formatted release notes
@@ -53,6 +55,27 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		State:       "closed",
 	}
 
+	repo, _, err := cl.Repositories.Get(ctx, conf.Org, conf.Repo)
+	if err != nil {
+		return fmt.Errorf("get repository: %+v", err)
+	}
+
+	rls, _, err := cl.Repositories.GetLatestRelease(ctx, conf.Org, conf.Repo)
+	if err != nil {
+		return fmt.Errorf("get latest release: %+v", err)
+	}
+
+	comp, _, err := cl.Repositories.CompareCommits(ctx, conf.Org, conf.Repo, rls.GetTagName(), repo.GetDefaultBranch())
+	if err != nil {
+		return fmt.Errorf("compare commitse: %s..%s %+v", rls.GetTagName(), repo.GetDefaultBranch(), err)
+	}
+
+	// new commits from latest release to default branch
+	var newCommits []string
+	for _, commit := range comp.Commits {
+		newCommits = append(newCommits, commit.GetSHA())
+	}
+
 	// Iterate over all PRs
 	for {
 		prs, resp, err := cl.PullRequests.List(ctx, conf.Org, conf.Repo, opt)
@@ -69,40 +92,39 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 				continue
 			}
 
+			commits, err := commitsAll(ctx, cl, conf.Org, conf.Repo, pr.GetNumber())
+			if err != nil {
+				return fmt.Errorf("listing PR commits: %s", err)
+			}
+			var prCommits []string
+			for _, commit := range commits {
+				prCommits = append(prCommits, commit.GetSHA())
+			}
+
+			if conf.StopAtLatestRelease && !any(prCommits, newCommits) {
+				// stop any new commits do not contains pr commits
+				return nil
+			}
+
 			fmt.Fprintf(w, "- PR #%d %s\n", pr.GetNumber(), pr.GetTitle())
 
 			if conf.IncludeCommits {
 				// Iterate over all commits in this PR.
-				commitOpt := &github.ListOptions{PerPage: 100}
-				for {
+				for _, commit := range commits {
+					sha := *commit.SHA
+					msg := *commit.Commit.Message
 
-					commits, resp, err := cl.PullRequests.ListCommits(ctx, conf.Org, conf.Repo, pr.GetNumber(), commitOpt)
-					if err != nil {
-						return fmt.Errorf("listing PR commits: %s", err)
+					// Strip multiple lines (i.e. only take first line)
+					if i := strings.Index(msg, "\n"); i != -1 {
+						msg = msg[:i]
 					}
-
-					// Iterate over commits in this page.
-					for _, commit := range commits {
-						sha := *commit.SHA
-						msg := *commit.Commit.Message
-
-						// Strip multiple lines (i.e. only take first line)
-						if i := strings.Index(msg, "\n"); i != -1 {
-							msg = msg[:i]
-						}
-						// Trim long lines
-						if len(msg) > 90 {
-							msg = msg[:90] + "..."
-						}
-						msg = strings.TrimSpace(msg)
-
-						fmt.Fprintf(w, "    - %s %s\n", sha, msg)
+					// Trim long lines
+					if len(msg) > 90 {
+						msg = msg[:90] + "..."
 					}
+					msg = strings.TrimSpace(msg)
 
-					if resp.NextPage == 0 {
-						break
-					}
-					commitOpt.Page = resp.NextPage
+					fmt.Fprintf(w, "    - %s %s\n", sha, msg)
 				}
 				fmt.Fprintln(w)
 			}
@@ -114,4 +136,41 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		opt.Page = resp.NextPage
 	}
 	return nil
+}
+
+func contains(a []string, e string) bool {
+	for _, v := range a {
+		if e == v {
+			return true
+		}
+	}
+	return false
+}
+
+func any(a []string, b []string) bool {
+	for _, c := range a {
+		if contains(b, c) {
+			return true
+		}
+	}
+	return false
+}
+
+func commitsAll(ctx context.Context, cl *github.Client, owner string, repo string, num int) ([]*github.RepositoryCommit, error) {
+	var list []*github.RepositoryCommit
+	commitOpt := &github.ListOptions{PerPage: 100}
+	for {
+		commits, resp, err := cl.PullRequests.ListCommits(ctx, owner, repo, num, commitOpt)
+		if err != nil {
+			return nil, fmt.Errorf("listing PR commits: %s", err)
+		}
+
+		list = append(list, commits...)
+
+		if resp.NextPage == 0 {
+			break
+		}
+		commitOpt.Page = resp.NextPage
+	}
+	return list, nil
 }
