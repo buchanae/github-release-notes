@@ -73,7 +73,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 	// new commits from latest release to default branch
 	var newCommits []string
 	for _, commit := range comp.Commits {
-		newCommits = append(newCommits, commit.GetSHA())
+		newCommits = append(newCommits, commit.GetCommit().GetTree().GetSHA())
 	}
 
 	// Iterate over all PRs
@@ -98,7 +98,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			}
 			var prCommits []string
 			for _, commit := range commits {
-				prCommits = append(prCommits, commit.GetSHA())
+				prCommits = append(prCommits, commit.GetCommit().GetTree().GetSHA())
 			}
 
 			if conf.StopAtLatestRelease && !any(prCommits, newCommits) {
