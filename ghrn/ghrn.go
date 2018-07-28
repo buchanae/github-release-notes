@@ -55,23 +55,6 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		State:       "closed",
 	}
 
-	repo, _, err := cl.Repositories.Get(ctx, conf.Org, conf.Repo)
-	if err != nil {
-		return fmt.Errorf("get repository: %+v", err)
-	}
-
-	rls, _, err := cl.Repositories.GetLatestRelease(ctx, conf.Org, conf.Repo)
-	if err != nil {
-		return fmt.Errorf("get latest release: %+v", err)
-	}
-
-	comp, _, err := cl.Repositories.CompareCommits(ctx, conf.Org, conf.Repo, rls.GetTagName(), repo.GetDefaultBranch())
-	if err != nil {
-		return fmt.Errorf("compare commitse: %s..%s %+v", rls.GetTagName(), repo.GetDefaultBranch(), err)
-	}
-
-	newCommits := commitHashes(comp.Commits)
-
 	// Iterate over all PRs
 	for {
 		prs, resp, err := cl.PullRequests.List(ctx, conf.Org, conf.Repo, opt)
@@ -92,11 +75,16 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			if err != nil {
 				return fmt.Errorf("listing PR commits: %s", err)
 			}
-			prCommits := commitHashes(commits)
 
-			if conf.SinceLatestRelease && !any(prCommits, newCommits) {
-				// Stop when a PR doesn't contain any commits from since the latest release.
-				return nil
+			if conf.SinceLatestRelease {
+				newCommits, err := newCommits(ctx, cl, conf.Org, conf.Repo)
+				if err != nil {
+					return fmt.Errorf("listing new commits: %+v", err)
+				}
+				if !any(commitHashes(commits), newCommits) {
+					// Stop when a PR doesn't contain any commits from since the latest release.
+					return nil
+				}
 			}
 
 			fmt.Fprintf(w, "- PR #%d %s\n", pr.GetNumber(), pr.GetTitle())
@@ -176,4 +164,23 @@ func commitHashes(commits []github.RepositoryCommit) []string {
 		newCommits = append(newCommits, commit.GetCommit().GetTree().GetSHA())
 	}
 	return newCommits
+}
+
+func newCommits(ctx context.Context, cl *github.Client, owner string, repo string) ([]string, error) {
+	repository, _, err := cl.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("get repository: %+v", err)
+	}
+
+	rls, _, err := cl.Repositories.GetLatestRelease(ctx, owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("get latest release: %+v", err)
+	}
+
+	comp, _, err := cl.Repositories.CompareCommits(ctx, owner, repo, rls.GetTagName(), repository.GetDefaultBranch())
+	if err != nil {
+		return nil, fmt.Errorf("compare commitse: %s..%s %+v", rls.GetTagName(), repository.GetDefaultBranch(), err)
+	}
+
+	return commitHashes(comp.Commits), nil
 }
