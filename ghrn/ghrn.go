@@ -92,10 +92,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			if err != nil {
 				return fmt.Errorf("listing PR commits: %s", err)
 			}
-			var prCommits []string
-			for _, commit := range commits {
-				prCommits = append(prCommits, commit.GetCommit().GetTree().GetSHA())
-			}
+			prCommits := commitHashes(commits)
 
 			if conf.SinceLatestRelease && !any(prCommits, newCommits) {
 				// Stop when a PR doesn't contain any commits from since the latest release.
@@ -152,8 +149,8 @@ func any(a []string, b []string) bool {
 	return false
 }
 
-func commitsAll(ctx context.Context, cl *github.Client, owner string, repo string, num int) ([]*github.RepositoryCommit, error) {
-	var list []*github.RepositoryCommit
+func commitsAll(ctx context.Context, cl *github.Client, owner string, repo string, num int) ([]github.RepositoryCommit, error) {
+	var list []github.RepositoryCommit
 	commitOpt := &github.ListOptions{PerPage: 100}
 	for {
 		commits, resp, err := cl.PullRequests.ListCommits(ctx, owner, repo, num, commitOpt)
@@ -161,7 +158,9 @@ func commitsAll(ctx context.Context, cl *github.Client, owner string, repo strin
 			return nil, fmt.Errorf("listing PR commits: %s", err)
 		}
 
-		list = append(list, commits...)
+		for _, commit := range commits {
+			list = append(list, *commit)
+		}
 
 		if resp.NextPage == 0 {
 			break
