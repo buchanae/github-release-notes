@@ -55,6 +55,10 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		State:       "closed",
 	}
 
+	repo, _, err := cl.Repositories.Get(ctx, conf.Org, conf.Repo)
+	if err != nil {
+		return fmt.Errorf("get repository: %+v", err)
+	}
 	var commitsNotMerged []string = nil
 	// Iterate over all PRs
 	for {
@@ -78,6 +82,11 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			}
 
 			if conf.SinceLatestRelease {
+				if pr.GetBase().GetRef() != repo.GetDefaultBranch() {
+					// Skip when PR base branch isn't a default branch
+					continue
+				}
+
 				if commitsNotMerged == nil {
 					commitsNotMerged, err = newCommits(ctx, cl, conf.Org, conf.Repo)
 					if err != nil {
