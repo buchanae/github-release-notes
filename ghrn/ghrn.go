@@ -55,6 +55,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		State:       "closed",
 	}
 
+	var commitsNotMerged []string = nil
 	// Iterate over all PRs
 	for {
 		prs, resp, err := cl.PullRequests.List(ctx, conf.Org, conf.Repo, opt)
@@ -77,11 +78,13 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			}
 
 			if conf.SinceLatestRelease {
-				newCommits, err := newCommits(ctx, cl, conf.Org, conf.Repo)
-				if err != nil {
-					return fmt.Errorf("listing new commits: %+v", err)
+				if commitsNotMerged == nil {
+					commitsNotMerged, err = newCommits(ctx, cl, conf.Org, conf.Repo)
+					if err != nil {
+						return fmt.Errorf("listing new commits: %+v", err)
+					}
 				}
-				if !any(commitHashes(commits), newCommits) {
+				if !any(commitHashes(commits), commitsNotMerged) {
 					// Stop when a PR doesn't contain any commits from since the latest release.
 					return nil
 				}
