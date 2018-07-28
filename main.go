@@ -16,7 +16,7 @@ func main() {
 	flag.StringVar(&conf.Repo, "repo", conf.Repo, "Repo. (Required)")
 	flag.IntVar(&conf.StopAt, "stop-at", conf.StopAt, "PR number to stop at")
 	flag.BoolVar(&conf.IncludeCommits, "include-commits", conf.IncludeCommits, "Include commit messages")
-	flag.BoolVar(&conf.StopAtLatestRelease, "since-latest-release", conf.IncludeCommits, "Stop at latest release's commit")
+	flag.BoolVar(&conf.StopAtLatestRelease, "since-latest-release", conf.StopAtLatestRelease, "Stop at latest release's commit")
 	flag.Parse()
 
 	if conf.Org == "" {
