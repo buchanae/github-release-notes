@@ -98,7 +98,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 			}
 
 			if conf.SinceLatestRelease && !any(prCommits, newCommits) {
-				// stop any new commits do not contains pr commits
+				// Stop when a PR doesn't contain any commits from since the latest release.
 				return nil
 			}
 

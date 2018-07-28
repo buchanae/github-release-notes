@@ -27,7 +27,7 @@ github-release-notes -org ohsu-comp-bio -repo funnel -stop-at 513
 - PR #514 build: fix release notes command
 ```
 
-You can generating notes with PR that not included latest release:
+You can generate notes for only PRs merged since the latest release:
 ```
 github-release-notes -org ohsu-comp-bio -repo funnel -since-latest-release 
 - PR #594 cmd/worker: run task from file
