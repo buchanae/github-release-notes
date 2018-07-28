@@ -26,8 +26,8 @@ type Config struct {
 	StopAt int
 	// IncludeCommits will include commmits messages for each PR.
 	IncludeCommits bool
-	// StopAtLatestRelease will stop at latest release commit.
-	StopAtLatestRelease bool
+	// SinceLatestRelease will only include PRs and commits merged since the latest release tag.
+	SinceLatestRelease bool
 }
 
 // BuildReleaseNotes lists GitHub Pull Requests and writes formatted release notes
@@ -101,7 +101,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 				prCommits = append(prCommits, commit.GetCommit().GetTree().GetSHA())
 			}
 
-			if conf.StopAtLatestRelease && !any(prCommits, newCommits) {
+			if conf.SinceLatestRelease && !any(prCommits, newCommits) {
 				// stop any new commits do not contains pr commits
 				return nil
 			}
