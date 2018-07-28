@@ -70,11 +70,7 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 		return fmt.Errorf("compare commitse: %s..%s %+v", rls.GetTagName(), repo.GetDefaultBranch(), err)
 	}
 
-	// new commits from latest release to default branch
-	var newCommits []string
-	for _, commit := range comp.Commits {
-		newCommits = append(newCommits, commit.GetCommit().GetTree().GetSHA())
-	}
+	newCommits := commitHashes(comp.Commits)
 
 	// Iterate over all PRs
 	for {
@@ -173,4 +169,12 @@ func commitsAll(ctx context.Context, cl *github.Client, owner string, repo strin
 		commitOpt.Page = resp.NextPage
 	}
 	return list, nil
+}
+
+func commitHashes(commits []github.RepositoryCommit) []string {
+	var newCommits []string
+	for _, commit := range commits {
+		newCommits = append(newCommits, commit.GetCommit().GetTree().GetSHA())
+	}
+	return newCommits
 }
