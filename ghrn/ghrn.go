@@ -28,6 +28,8 @@ type Config struct {
 	IncludeCommits bool
 	// SinceLatestRelease will only include PRs and commits merged since the latest release tag.
 	SinceLatestRelease bool
+	// IncludeAuthor will prefix the message with an author of the PR
+	IncludeAuthor bool
 }
 
 // BuildReleaseNotes lists GitHub Pull Requests and writes formatted release notes
@@ -90,7 +92,11 @@ func BuildReleaseNotes(ctx context.Context, w io.Writer, conf Config) error {
 				}
 			}
 
-			fmt.Fprintf(w, "- PR #%d %s\n", pr.GetNumber(), pr.GetTitle())
+			if conf.IncludeAuthor {
+				fmt.Fprintf(w, "- PR #%d - @%s - %s\n", pr.GetNumber(), *pr.GetUser().Login, pr.GetTitle())
+			} else {
+				fmt.Fprintf(w, "- PR #%d %s\n", pr.GetNumber(), pr.GetTitle())
+			}
 
 			if conf.IncludeCommits {
 				// Iterate over all commits in this PR.
