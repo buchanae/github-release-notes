@@ -18,7 +18,7 @@ func main() {
 	flag.BoolVar(&conf.IncludeCommits, "include-commits", conf.IncludeCommits, "Include commit messages")
 	flag.BoolVar(&conf.SinceLatestRelease, "since-latest-release", conf.SinceLatestRelease, "Stop at latest release's commit")
 	flag.BoolVar(&conf.IncludeAuthor, "include-author", conf.IncludeAuthor, "Include author of PR in message")
-	flag.StringVar(&conf.GitHubToken, "github-token", os.Getenv("GITHUB_TOKEN"), "Github Token.  (Defaults to env GITHUB_TOKEN)")
+	flag.StringVar(&conf.GitHubToken, "github-token", "", "Github Token.  (Defaults to env GITHUB_TOKEN)")
 	flag.Parse()
 
 	if conf.Org == "" {
@@ -30,6 +30,10 @@ func main() {
 		flag.Usage()
 		fmt.Fprintln(os.Stderr, "\nError: -repo is required.")
 		os.Exit(1)
+	}
+
+	if conf.GitHubToken == "" {
+		conf.GitHubToken = os.Getenv("GITHUB_TOKEN")
 	}
 
 	ctx := context.Background()
