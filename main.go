@@ -17,6 +17,8 @@ func main() {
 	flag.IntVar(&conf.StopAt, "stop-at", conf.StopAt, "PR number to stop at")
 	flag.BoolVar(&conf.IncludeCommits, "include-commits", conf.IncludeCommits, "Include commit messages")
 	flag.BoolVar(&conf.SinceLatestRelease, "since-latest-release", conf.SinceLatestRelease, "Stop at latest release's commit")
+	flag.BoolVar(&conf.IncludeAuthor, "include-author", conf.IncludeAuthor, "Include author of PR in message")
+	flag.StringVar(&conf.GitHubToken, "github-token", "", "Github Token.  (Defaults to env GITHUB_TOKEN)")
 	flag.Parse()
 
 	if conf.Org == "" {
@@ -30,7 +32,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	conf.GitHubToken = os.Getenv("GITHUB_TOKEN")
+	if conf.GitHubToken == "" {
+		conf.GitHubToken = os.Getenv("GITHUB_TOKEN")
+	}
 
 	ctx := context.Background()
 	err := ghrn.BuildReleaseNotes(ctx, os.Stdout, conf)
